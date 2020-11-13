@@ -56,13 +56,18 @@ Target "Pack" (fun _ ->
                 })
 
     !! "src/Quartz/Quartz.csproj"
+        ++ "src/Quartz.AspNetCore/Quartz.AspNetCore.csproj"
+        ++ "src/Quartz.Extensions.DependencyInjection/Quartz.Extensions.DependencyInjection.csproj"
+        ++ "src/Quartz.Extensions.Hosting/Quartz.Extensions.Hosting.csproj"
         ++ "src/Quartz.Jobs/Quartz.Jobs.csproj"
+        ++ "src/Quartz.OpenTelemetry.Instrumentation/Quartz.OpenTelemetry.Instrumentation.csproj"
+        ++ "src/Quartz.OpenTracing/Quartz.OpenTracing.csproj"
         ++ "src/Quartz.Plugins/Quartz.Plugins.csproj"
         ++ "src/Quartz.Plugins.TimeZoneConverter/Quartz.Plugins.TimeZoneConverter.csproj"
         ++ "src/Quartz.Serialization.Json/Quartz.Serialization.Json.csproj"
         |> Seq.iter pack
 
-    !! "build/Release/**/*.nupkg"
+    !! "build/Release/**/*.*nupkg"
         |> Copy "artifacts"
 
 )
@@ -79,6 +84,7 @@ Target "Zip" (fun _ ->
         ++ "build.*"
         ++ "quartz.net.snk"
         ++ "build/Release/Quartz*/**/*"
+        ++ "tools/NuGet/NuGet.exe"
         -- "src/Quartz.Benchmark/**"
         -- "src/Quartz.Web/**"
         -- "src/AssemblyInfo.cs"
@@ -136,3 +142,4 @@ Target "ApiDoc" (fun _ ->
   ==> "TestLinux"
 
 RunTargetOrDefault "Test"
+

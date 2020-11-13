@@ -7,9 +7,8 @@ using System.IO;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
-#if NETCORE
+
 using Microsoft.Data.Sqlite;
-#endif
 using NUnit.Framework;
 
 using Quartz.Impl;
@@ -105,7 +104,6 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
             return RunAdoJobStoreTest("MySqlConnector", "MySQL", serializerType, properties);
         }
 
-#if NETCORE
         [Test]
         [TestCaseSource(nameof(GetSerializerTypes))]
         public async Task TestSQLiteMicrosoft(string serializerType)
@@ -120,7 +118,7 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
             using (var connection = new SqliteConnection(dbConnectionStrings["SQLite-Microsoft"]))
             {
                 await connection.OpenAsync();
-                string sql = await File.ReadAllTextAsync("../../../../database/tables/tables_sqlite.sql");
+                string sql = File.ReadAllText("../../../../database/tables/tables_sqlite.sql");
 
                 var command = new SqliteCommand(sql, connection);
                 command.ExecuteNonQuery();
@@ -132,7 +130,6 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
             properties["quartz.jobStore.driverDelegateType"] = "Quartz.Impl.AdoJobStore.SQLiteDelegate, Quartz";
             await RunAdoJobStoreTest("SQLite-Microsoft", "SQLite-Microsoft", serializerType, properties, clustered: false);
         }
-#endif
 
         [Test]
         [TestCaseSource(nameof(GetSerializerTypes))]
@@ -195,26 +192,47 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
             NameValueCollection extraProperties,
             bool clustered = true)
         {
-            var builder = SchedulerBuilder.Create("instance_one", "TestScheduler")
-                .WithDefaultThreadPool(x => x.WithThreadCount(10))
-                .WithMisfireThreshold(TimeSpan.FromSeconds(60))
-                .UsePersistentStore(store =>
-                {
-                    var x = store
-                        .UseProperties(false)
-                        .Clustered(clustered, options => options.WithCheckinInterval(TimeSpan.FromMilliseconds(1000)))
-                        .UseGenericDatabase(dbProvider, db => db.WithConnectionString(dbConnectionStrings[connectionStringId]));
+            var config = SchedulerBuilder.Create("instance_one", "TestScheduler");
+            config.UseDefaultThreadPool(x =>
+            {
+                x.MaxConcurrency = 10;
+            });
+            config.MisfireThreshold = TimeSpan.FromSeconds(60);
 
-                    x = serializerType == "json"
-                        ? x.WithJsonSerializer()
-                        : x.WithBinarySerializer();
-                });
+            config.UsePersistentStore(store =>
+            {
+                store.UseProperties = false;
+
+                if (clustered)
+                {
+                    store.UseClustering(c =>
+                    {
+                        c.CheckinInterval = TimeSpan.FromMilliseconds(1000);
+                    });
+                }
+                    
+                store.UseGenericDatabase(dbProvider, db => 
+                    db.ConnectionString = dbConnectionStrings[connectionStringId]
+                );
+
+                if (serializerType == "json")
+                {
+                    store.UseJsonSerializer(j =>
+                    {
+                        j.AddCalendarSerializer<CustomCalendar>(new CustomCalendarSerializer());
+                    });
+                }
+                else
+                {
+                    store.UseBinarySerializer();
+                }
+            });
 
             if (extraProperties != null)
             {
                 foreach (string key in extraProperties.Keys)
                 {
-                    builder.SetProperty(key, extraProperties[key]);
+                    config.SetProperty(key, extraProperties[key]);
                 }
             }
 
@@ -222,7 +240,7 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
             FailFastLoggerFactoryAdapter.Errors.Clear();
 
             // First we must get a reference to a scheduler
-            IScheduler sched = await builder.Build();
+            IScheduler sched = await config.BuildScheduler();
             SmokeTestPerformer performer = new SmokeTestPerformer();
             await performer.Test(sched, clearJobs, scheduleJobs);
 
@@ -519,7 +537,7 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
         {
             public Task Execute(IJobExecutionContext context)
             {
-                return TaskUtil.CompletedTask;
+                return Task.CompletedTask;
             }
         }
 
@@ -530,7 +548,7 @@ namespace Quartz.Tests.Integration.Impl.AdoJobStore
                 try
                 {
                     ((ManualResetEventSlim) context.Scheduler.Context.Get(KeyResetEvent)).Wait(TimeSpan.FromSeconds(20));
-                    return TaskUtil.CompletedTask;
+                    return Task.CompletedTask;
                 }
                 catch (SchedulerException ex)
                 {

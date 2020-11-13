@@ -23,8 +23,6 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-using Quartz.Logging;
-
 namespace Quartz.Examples.Example10
 {
     /// <summary>
@@ -34,8 +32,6 @@ namespace Quartz.Examples.Example10
     /// <author>Marko Lahma (.NET)</author>
     public class SimpleJob : IJob
     {
-        private static readonly ILog log = LogProvider.GetLogger(typeof (SimpleJob));
-
         /// <summary>
         /// Called by the <see cref="IScheduler" /> when a
         /// <see cref="ITrigger" /> fires that is associated with
@@ -46,20 +42,20 @@ namespace Quartz.Examples.Example10
             // This job simply prints out its job name and the
             // date and time that it is running
             JobKey jobKey = context.JobDetail.Key;
-            log.InfoFormat("Executing job: {0} executing at {1}", jobKey, DateTime.Now.ToString("r"));
+            Console.WriteLine("Executing job: {0} executing at {1:r}", jobKey, DateTime.Now);
 
             if (context.MergedJobDataMap.Count > 0)
             {
                 ICollection<string> keys = context.MergedJobDataMap.Keys;
                 foreach (string key in keys)
                 {
-                    string val = context.MergedJobDataMap.GetString(key);
-                    log.InfoFormat(" - jobDataMap entry: {0} = {1}", key, val);
+                    var val = context.MergedJobDataMap.GetString(key);
+                    Console.WriteLine(" - jobDataMap entry: {0} = {1}", key, val);
                 }
             }
 
             context.Result = "hello";
-            return TaskUtil.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

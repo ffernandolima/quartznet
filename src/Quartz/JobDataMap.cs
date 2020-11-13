@@ -67,14 +67,21 @@ namespace Quartz
         /// <summary>
         /// Create an empty <see cref="JobDataMap" />.
         /// </summary>
-        public JobDataMap() : base(15)
+        public JobDataMap() : this(0)
+        {
+        }
+
+        /// <summary>
+        /// Create <see cref="JobDataMap" /> with initial capacity.
+        /// </summary>
+        public JobDataMap(int initialCapacity) : base(initialCapacity)
         {
         }
 
         /// <summary>
         /// Create a <see cref="JobDataMap" /> with the given data.
         /// </summary>
-        public JobDataMap(IDictionary<string, object> map) : this()
+        public JobDataMap(IDictionary<string, object> map) : this(map.Count)
         {
             PutAll(map);
 
@@ -86,11 +93,13 @@ namespace Quartz
         /// <summary>
         /// Create a <see cref="JobDataMap" /> with the given data.
         /// </summary>
-        public JobDataMap(IDictionary map) : this()
+        public JobDataMap(IDictionary map) : this(map.Count)
         {
+#pragma warning disable 8605
             foreach (DictionaryEntry entry in map)
+#pragma warning restore 8605
             {
-                Put((string) entry.Key, entry.Value);
+                Put((string) entry.Key, entry.Value!);
             }
 
             // When constructing a new data map from another existing map, we should NOT mark dirty flag as true
@@ -213,8 +222,8 @@ namespace Quartz
         /// </summary>
         public virtual void PutAsString(string key, Guid? value)
         {
-            string strValue = value.HasValue ? value.Value.ToString("N") : null;
-            Put(key, strValue);
+            string? strValue = value?.ToString("N");
+            Put(key, strValue!);
         }
 
         /// <summary>

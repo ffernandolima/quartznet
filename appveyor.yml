@@ -1,21 +1,30 @@
 configuration: Release
-image: Visual Studio 2017
+image: Visual Studio 2019
   
 version: '{build}'
 
 pull_requests:
   do_not_increment_build_number: true
 
+skip_branch_with_pr: true
+
 branches:
   except:
-  - gh-pages
   - 2.x
+  
+skip_commits:
+  files:
+    - docs/**/*
+    - package.json
+    - docs.yml
 
 services:
-- mssql2016
 - mysql
 - postgresql
 
+init:
+  - net start MSSQL$SQL2019
+ 
 nuget:
   project_feed: true
   disable_publish_on_pr: true
@@ -23,10 +32,11 @@ nuget:
 build_script:
 - cmd: build.cmd Pack
 
-test: off
+test_script:
+  - dotnet test src\Quartz.Tests.Unit\Quartz.Tests.Unit.csproj -c Release
 
 artifacts:
-- path: artifacts/*.nupkg
+- path: artifacts/*.*nupkg
   name: NuGet
 - path: artifacts/*.zip
   name: Zip
@@ -39,3 +49,11 @@ deploy:
   skip_symbols: true
   on:
     branch: master
+- provider: NuGet
+  name: production
+  symbol_server: https://www.nuget.org
+  api_key:
+    secure: ZNvfUugU3rYb9t+UWbqt/hspUNLQfjWCvxTFQDpxkEEjLuLNk6amLDfGZZuiZxn4
+  on:
+    branch: master
+    appveyor_repo_tag: true    

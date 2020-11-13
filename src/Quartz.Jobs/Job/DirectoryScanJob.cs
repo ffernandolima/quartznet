@@ -59,7 +59,7 @@ namespace Quartz.Job
         /// </summary>
         internal const string SearchPattern = "SEARCH_PATTERN";
 
-        ///<see cref="JobDataMap"/> Key to specify wether to scan sub directories for file changes.
+        ///<see cref="JobDataMap"/> Key to specify whether to scan sub directories for file changes.
         internal const string IncludeSubDirectories = "INCLUDE_SUB_DIRECTORIES";
 
         ///<see cref="JobDataMap"/> key to store the current file list of the scanned directories. 
@@ -129,7 +129,7 @@ namespace Quartz.Job
                     log.Debug($"Directory '{dir}' contents unchanged.");
                 }
             }
-            return TaskUtil.CompletedTask;
+            return Task.CompletedTask;
         }
 
         protected void GetUpdatedOrNewFiles(string dirName, DateTime lastModifiedDate, DateTime maxAgeDate, List<FileInfo> currentFileList,
@@ -168,8 +168,13 @@ namespace Quartz.Job
 
         private class FileInfoComparer : IEqualityComparer<FileInfo>
         {
-            public bool Equals(FileInfo x, FileInfo y)
+            public bool Equals(FileInfo? x, FileInfo? y)
             {
+                if (x is null || y is null)
+                {
+                    return false;
+                }
+                
                 return x.FullName.Equals(y.FullName);
             }
 
